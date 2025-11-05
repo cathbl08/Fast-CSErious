@@ -93,7 +93,99 @@ namespace ASC_HPC
   
   inline SIMD<double,2> hSum (SIMD<double,2> a, SIMD<double,2> b)
   { return vpaddq_f64(a.val(), b.val()); }
-  
+
+  // greater than or equal to
+  // uint64x2_t vcgeq_f64(float64x2_t a, float64x2_t b)
+  /*inline SIMD<double,2> operator>=(SIMD<double,2> a, SIMD<double,2> b)
+  {
+    // std::cout << "using >= operator for ARM" << std::endl;
+    return SIMD<double,2>(vcgeq_f64(a.val(), b.val()));
+  }
+*/
+  inline SIMD<double,2> operator>=(SIMD<double,2> a, SIMD<double,2> b)
+{
+    uint64x2_t mask = vcgeq_f64(a.val(), b.val());
+
+    // Convert mask to doubles: true -> 1.0, false -> 0.0
+    float64x2_t result = vbslq_f64(mask, vdupq_n_f64(1.0), vdupq_n_f64(0.0));
+
+    return SIMD<double,2>(result);
 }
+
+  inline SIMD<double,4> operator>=(SIMD<double,4> a, SIMD<double,4> b)
+  {
+    // std::cout << "using >= operator for ARM 4-wide" << std::endl;
+    return SIMD<double,4>(a.lo()>=b.lo(), a.hi()>=b.hi());
+  }
+
+
+  // less than or equal to
+  // uint64x2_t vcleq_f64(float64x2_t a, float64x2_t b)
+  /*inline SIMD<double,2> operator<=(SIMD<double,2> a, SIMD<double,2> b)
+  {
+    // std::cout << "using <= operator for ARM" << std::endl;
+    return SIMD<double,2>(vcleq_f64(a.val(), b.val()));
+  }*/
+
+ inline SIMD<double,2> operator<=(SIMD<double,2> a, SIMD<double,2> b)
+{
+    // Get mask: each lane is all-ones if a[i] <= b[i], else 0
+    uint64x2_t mask = vcleq_f64(a.val(), b.val());
+
+    // Convert mask to doubles: true -> 1.0, false -> 0.0
+    float64x2_t result = vbslq_f64(mask, vdupq_n_f64(1.0), vdupq_n_f64(0.0));
+
+    return SIMD<double,2>(result);
+}
+
+
+  inline SIMD<double,4> operator<=(SIMD<double,4> a, SIMD<double,4> b)
+  {
+    // std::cout << "using <= operator for ARM 4-wide" << std::endl;
+    return SIMD<double,4>(a.lo()<=b.lo(), a.hi()<=b.hi());
+  }
+
+  // greater than
+  // uint64x2_t vcgtq_f64(float64x2_t a, float64x2_t b)
+  inline SIMD<double,2> operator>(SIMD<double,2> a, SIMD<double,2> b)
+  {
+    uint64x2_t mask = vcgtq_f64(a.val(), b.val());
+    float64x2_t result = vbslq_f64(mask, vdupq_n_f64(1.0), vdupq_n_f64(0.0));
+    return SIMD<double,2>(result);
+  }
+
+  inline SIMD<double,4> operator>(SIMD<double,4> a, SIMD<double,4> b)
+  {
+    return SIMD<double,4>(a.lo()>b.lo(), a.hi()>b.hi());
+  }
+
+  // less than
+  // uint64x2_t vcltq_f64(float64x2_t a, float64x2_t b)
+  inline SIMD<double,2> operator<(SIMD<double,2> a, SIMD<double,2> b)
+  {
+    uint64x2_t mask = vcltq_f64(a.val(), b.val());
+    float64x2_t result = vbslq_f64(mask, vdupq_n_f64(1.0), vdupq_n_f64(0.0));
+    return SIMD<double,2>(result);
+  }
+
+  inline SIMD<double,4> operator<(SIMD<double,4> a, SIMD<double,4> b)
+  {
+    return SIMD<double,4>(a.lo()<b.lo(), a.hi()<b.hi());
+  }
+
+  // is equal to
+  inline SIMD<double,2> operator==(SIMD<double,2> a, SIMD<double,2> b)
+  {
+    uint64x2_t mask = vceqq_f64(a.val(), b.val());
+    float64x2_t result = vbslq_f64(mask, vdupq_n_f64(1.0), vdupq_n_f64(0.0));
+    return SIMD<double,2>(result);
+  }
+
+  inline SIMD<double,4> operator==(SIMD<double,4> a, SIMD<double,4> b)
+  {
+    return SIMD<double,4>(a.lo()==b.lo(), a.hi()==b.hi());
+  }
+}
+
 
 #endif

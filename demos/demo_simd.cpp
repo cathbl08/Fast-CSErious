@@ -71,4 +71,7 @@ int main()
 
   cout << "select(mask, a, b) = " << select(mask, a,b) << endl;
   
+  cout << " a >= b = " << (a >= b) << endl;
+  cout << " a <= b = " << (a <= b) << endl;
+  cout << " a == b = " << (a == b) << endl;
 }

@@ -238,7 +238,9 @@ namespace ASC_HPC
 
   template <typename TA, typename T, size_t S>
   auto operator>= (TA a, const SIMD<T,S> & b)
-  { return SIMD<T,S>(a) >= b; }
+  { 
+    // std::cout << "Warning: implicit conversion in operator>=" << std::endl;
+    return SIMD<T,S>(a) >= b; }
   
 }
   
