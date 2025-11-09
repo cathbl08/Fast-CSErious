@@ -3,6 +3,9 @@
 
 #include "arm_neon.h"
 
+#include <cstdint>
+#include <array>
+
 /*
   implementation of SIMDs for ARM-Neon CPUs:
   https://arm-software.github.io/acle/neon_intrinsics/advsimd.html
@@ -80,7 +83,13 @@ namespace ASC_HPC
   inline auto operator- (SIMD<double,2> a, SIMD<double,2> b) { return SIMD<double,2> (a.val()-b.val()); }
   
   inline auto operator* (SIMD<double,2> a, SIMD<double,2> b) { return SIMD<double,2> (a.val()*b.val()); }
-  inline auto operator* (double a, SIMD<double,2> b) { return SIMD<double,2> (a*b.val()); }    
+  inline auto operator* (double a, SIMD<double,2> b) { return SIMD<double,2> (a*b.val()); }   
+  
+
+  //
+  inline SIMD<mask64,2> operator<= (SIMD<double,2> a, SIMD<double,2> b) { return SIMD<mask64,2>(vreinterpretq_s64_u64(vcleq_f64(a.val(), b.val())));}  
+  inline SIMD<mask64,2> operator== (SIMD<double,2> a, SIMD<double,2> b) { return SIMD<mask64,2>(vreinterpretq_s64_u64(vceqq_f64(a.val(), b.val())));}
+  inline SIMD<mask64,2> operator>= (SIMD<double,2> a, SIMD<double,2> b) { return SIMD<mask64,2>(vreinterpretq_s64_u64(vcgeq_f64(a.val(), b.val())));}
   
   // a*b+c
   inline SIMD<double,2> fma (SIMD<double,2> a, SIMD<double,2> b, SIMD<double,2> c) 

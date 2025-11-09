@@ -104,7 +104,8 @@ namespace ASC_HPC
   
   inline auto operator* (SIMD<double,4> a, SIMD<double,4> b) { return SIMD<double,4> (_mm256_mul_pd(a.val(), b.val())); }
   inline auto operator* (double a, SIMD<double,4> b) { return SIMD<double,4>(a)*b; }
-  
+
+
 #ifdef __FMA__
   inline SIMD<double,4> fma (SIMD<double,4> a, SIMD<double,4> b, SIMD<double,4> c)
   { return _mm256_fmadd_pd (a.val(), b.val(), c.val()); }
@@ -116,6 +117,13 @@ namespace ASC_HPC
   
   inline auto operator>= (SIMD<double,4> a, SIMD<double,4> b)
   { return SIMD<mask64,4>(_mm256_cmp_pd (a.val(), b.val(), _CMP_GE_OQ)); }
+
+  inline auto operator== (SIMD<double,4> a, SIMD<double,4> b) 
+  { return SIMD<mask64,4>(_mm256_cmp_pd(a.val(), b.val(), _CMP_EQ_OQ)); }
+
+  inline auto operator<= (SIMD<double,4> a, SIMD<double,4> b) 
+  { return SIMD<mask64,4>(_mm256_cmp_pd(a.val(), b.val(), _CMP_LE_OQ)); }
+
   
 
   

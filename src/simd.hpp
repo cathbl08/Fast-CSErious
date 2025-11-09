@@ -5,7 +5,7 @@
 #include<string>
 #include<memory>
 #include <array>
-
+#include <cstdint>
 
 namespace ASC_HPC
 {
@@ -241,6 +241,39 @@ namespace ASC_HPC
   { 
     // std::cout << "Warning: implicit conversion in operator>=" << std::endl;
     return SIMD<T,S>(a) >= b; }
+
+
+  // new operator <=
+  template <typename T, size_t S>
+  auto operator<= (SIMD<T,S> a, SIMD<T,S> b)
+  { return SIMD<mask64,S>(a.lo()<=b.lo(), a.hi()<=b.hi()); }
+
+  template <typename T>
+  auto operator<= (SIMD<T,1> a, SIMD<T,1> b)
+  { return SIMD<mask64,1>(a.val()<=b.val()); }
+
+
+  template <typename TA, typename T, size_t S>
+  auto operator<= (TA a, const SIMD<T,S> & b)
+  { 
+    // std::cout << "Warning: implicit conversion in operator<=" << std::endl;
+    return SIMD<T,S>(a) <= b; }
+
+
+  // new operator == 
+  template <typename T, size_t S>
+  auto operator== (SIMD<T,S> a, SIMD<T,S> b)
+  { return SIMD<mask64,S>(a.lo()==b.lo(), a.hi()==b.hi()); }
+
+  template <typename T>
+  auto operator== (SIMD<T,1> a, SIMD<T,1> b)
+  { return SIMD<mask64,1>(a.val()==b.val()); }
+
+  template <typename TA, typename T, size_t S>
+  auto operator== (TA a, const SIMD<T,S> & b)
+  { 
+    // std::cout << "Warning: implicit conversion in operato== " << std::endl;
+    return SIMD<T,S>(a) == b; }
   
 }
   
