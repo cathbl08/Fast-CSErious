@@ -137,6 +137,10 @@ namespace ASC_HPC
     void store (T * ptr, SIMD<mask64,1> mask) const { if (mask.val()) *ptr = m_val; }
   };
 
+  // template<> class SIMD<mask64,2>;
+  // template<> class SIMD<double,2>;
+  // template<> class SIMD<int64_t,2>;
+
 
   template <typename T, size_t S>  
   std::ostream & operator<< (std::ostream & ost, SIMD<T,S> simd)
