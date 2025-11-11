@@ -1,6 +1,6 @@
 #include <iostream>
 #include <sstream>
-
+#include <array>
 
 #include <simd.hpp>
 
@@ -74,4 +74,15 @@ int main()
   cout << " a >= b = " << (a >= b) << endl;
   cout << " a <= b = " << (a <= b) << endl;
   cout << " a == b = " << (a == b) << endl;
+
+  // transpose test 4x4 
+  std::array<double,4> v0{1,2,3,4}, v1{5,6,7,8}, v2{9,10,11,12}, v3{13,14,15,16};
+  SIMD<double,4> a0(v0), a1(v1), a2(v2), a3(v3);
+
+  SIMD<double,4> b0,b1,b2,b3;
+
+  transpose(a0,a1,a2,a3,b0,b1,b2,b3);
+  std::cout << b0 << "\n" << b1 << "\n" << b2 << "\n" << b3 << "\n";
+
+
 }

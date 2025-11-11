@@ -278,6 +278,10 @@ namespace ASC_HPC
   { 
     // std::cout << "Warning: implicit conversion in operato== " << std::endl;
     return SIMD<T,S>(a) == b; }
+
+
+  void transpose (SIMD<double,4> a0, SIMD<double,4> a1, SIMD<double,4> a2, SIMD<double,4> a3,
+                SIMD<double,4> &b0, SIMD<double,4> &b1, SIMD<double,4> &b2, SIMD<double,4> &b3);
   
 }
   

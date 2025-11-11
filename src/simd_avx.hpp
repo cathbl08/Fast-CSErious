@@ -226,6 +226,36 @@ inline SIMD<double,2> fma(SIMD<double,2> a, SIMD<double,2> b, SIMD<double,2> c) 
   inline auto operator<=(SIMD<double,2> a, SIMD<double,2> b) { return SIMD<mask64,2>(_mm_castpd_si128(_mm_cmple_pd(a.val(), b.val()))); }
   inline auto operator>=(SIMD<double,2> a, SIMD<double,2> b) { return SIMD<mask64,2>(_mm_castpd_si128(_mm_cmpge_pd(a.val(), b.val()))); }
 
+
+  inline void transpose(
+    SIMD<double,4> a0, SIMD<double,4> a1,
+    SIMD<double,4> a2, SIMD<double,4> a3,
+    SIMD<double,4> &b0, SIMD<double,4> &b1,
+    SIMD<double,4> &b2, SIMD<double,4> &b3)
+{
+    // load 4 rows 
+    __m256d r0 = a0.val();
+    __m256d r1 = a1.val();
+    __m256d r2 = a2.val();
+    __m256d r3 = a3.val();
+
+    __m256d t0 = _mm256_unpacklo_pd(r0, r1); 
+    __m256d t1 = _mm256_unpackhi_pd(r0, r1); 
+    __m256d t2 = _mm256_unpacklo_pd(r2, r3); 
+    __m256d t3 = _mm256_unpackhi_pd(r2, r3); 
+
+    // combine two 128 halves
+    __m256d c0 = _mm256_permute2f128_pd(t0, t2, 0x20); 
+    __m256d c1 = _mm256_permute2f128_pd(t1, t3, 0x20); 
+    __m256d c2 = _mm256_permute2f128_pd(t0, t2, 0x31);
+    __m256d c3 = _mm256_permute2f128_pd(t1, t3, 0x31); 
+
+    // store into SIMD<double,4>
+    b0 = SIMD<double,4>(c0);
+    b1 = SIMD<double,4>(c1);
+    b2 = SIMD<double,4>(c2);
+    b3 = SIMD<double,4>(c3);
+}
   
 }
 
