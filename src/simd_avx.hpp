@@ -23,6 +23,7 @@ namespace ASC_HPC
 
     SIMD (__m128i mask) : m_mask(mask) { };
     SIMD (__m128d mask) : m_mask(_mm_castpd_si128(mask)) { ; }
+    SIMD (SIMD<mask64,1> lo, SIMD<mask64,1> hi) : m_mask(_mm_set_epi64x(hi[0] ? -1 : 0, lo[0] ? -1 : 0)) { }
     auto val() const { return m_mask; }
     mask64 operator[](size_t i) const { return ( (int64_t*)&m_mask)[i] != 0; }
     
@@ -39,9 +40,10 @@ namespace ASC_HPC
 
     SIMD (__m256i mask) : m_mask(mask) { };
     SIMD (__m256d mask) : m_mask(_mm256_castpd_si256(mask)) { ; }
+    SIMD (SIMD<mask64,2> lo, SIMD<mask64,2> hi) : m_mask(_mm256_insertf128_si256(_mm256_castsi128_si256(lo.val()), hi.val(), 1)) { }
     auto val() const { return m_mask; }
     mask64 operator[](size_t i) const { return ( (int64_t*)&m_mask)[i] != 0; }
-    
+
     // SIMD<mask64, 2> lo() const { return SIMD<mask64,2>((*this)[0], (*this)[1]); }
     // SIMD<mask64, 2> hi() const { return SIMD<mask64,2>((*this)[2], (*this)[3]); }
 
@@ -49,6 +51,53 @@ namespace ASC_HPC
     SIMD<mask64,2> hi() const { return SIMD<mask64,2>(_mm256_extractf128_si256(m_mask, 1)); }
   };
 
+
+  template<>
+  class SIMD<int64_t,2>
+  {
+    __m128i m_val;
+  public:
+    SIMD () = default;
+    SIMD (const SIMD &) = default;
+    SIMD(int64_t val) : m_val{_mm_set1_epi64x(val)} {};
+    SIMD(__m128i val) : m_val{val} {};
+    SIMD (int64_t v0, int64_t v1) : m_val{_mm_set_epi64x(v1,v0) } { } 
+    SIMD (SIMD<int64_t,1> v0, SIMD<int64_t,1> v1) : SIMD(v0[0], v1[0]) { }  // can do better !
+    // SIMD (std::array<double,4> a) : SIMD(a[0],a[1],a[2],a[3]) { }
+    // SIMD (double const * p) { val = _mm256_loadu_pd(p); }
+    // SIMD (double const * p, SIMD<mask64,4> mask) { val = _mm256_maskload_pd(p, mask.val()); }
+    
+    static constexpr int size() { return 2; }
+    auto val() const { return m_val; }
+    // const double * Ptr() const { return (double*)&val; }
+    SIMD<int64_t, 1> lo() const { return SIMD<int64_t,1>((*this)[0]); }
+    SIMD<int64_t, 1> hi() const { return SIMD<int64_t,1>((*this)[1]); }
+    int64_t operator[](size_t i) const { return ((int64_t*)&m_val)[i]; }
+  };
+
+  
+  template<>
+  class SIMD<int64_t,4>
+  {
+    __m256i m_val;
+  public:
+    SIMD () = default;
+    SIMD (const SIMD &) = default;
+    SIMD(int64_t val) : m_val{_mm256_set1_epi64x(val)} {};
+    SIMD(__m256i val) : m_val{val} {};
+    SIMD (int64_t v0, int64_t v1, int64_t v2, int64_t v3) : m_val{_mm256_set_epi64x(v3,v2,v1,v0) } { } 
+    SIMD (SIMD<int64_t,2> v0, SIMD<int64_t,2> v1) : SIMD(v0[0], v0[1], v1[0], v1[1]) { }  // can do better !
+    // SIMD (std::array<double,4> a) : SIMD(a[0],a[1],a[2],a[3]) { }
+    // SIMD (double const * p) { val = _mm256_loadu_pd(p); }
+    // SIMD (double const * p, SIMD<mask64,4> mask) { val = _mm256_maskload_pd(p, mask.val()); }
+    
+    static constexpr int size() { return 4; }
+    auto val() const { return m_val; }
+    // const double * Ptr() const { return (double*)&val; }
+    SIMD<int64_t, 2> lo() const { return SIMD<int64_t, 2>(_mm256_extractf128_si256(m_val, 0)); }
+    SIMD<int64_t, 2> hi() const { return SIMD<int64_t, 2>(_mm256_extractf128_si256(m_val, 1)); }
+    int64_t operator[](size_t i) const { return ((int64_t*)&m_val)[i]; }
+  };
   
 
   template<>
@@ -117,54 +166,17 @@ namespace ASC_HPC
   };
   
 
-  
-  template<>
-  class SIMD<int64_t,2>
+  SIMD<int64_t,4> lround(SIMD<double,4> val)
   {
-    __m128i m_val;
-  public:
-    SIMD () = default;
-    SIMD (const SIMD &) = default;
-    SIMD(int64_t val) : m_val{_mm_set1_epi64x(val)} {};
-    SIMD(__m128i val) : m_val{val} {};
-    SIMD (int64_t v0, int64_t v1) : m_val{_mm_set_epi64x(v1,v0) } { } 
-    SIMD (SIMD<int64_t,1> v0, SIMD<int64_t,1> v1) : SIMD(v0[0], v1[0]) { }  // can do better !
-    // SIMD (std::array<double,4> a) : SIMD(a[0],a[1],a[2],a[3]) { }
-    // SIMD (double const * p) { val = _mm256_loadu_pd(p); }
-    // SIMD (double const * p, SIMD<mask64,4> mask) { val = _mm256_maskload_pd(p, mask.val()); }
-    
-    static constexpr int size() { return 2; }
-    auto val() const { return m_val; }
-    // const double * Ptr() const { return (double*)&val; }
-    // SIMD<double, 2> Lo() const { return _mm256_extractf128_pd(val, 0); }
-    // SIMD<double, 2> Hi() const { return _mm256_extractf128_pd(val, 1); }
-    int64_t operator[](size_t i) const { return ((int64_t*)&m_val)[i]; }
-  };
+    __m128i tmp32 = _mm256_cvtpd_epi32(_mm256_round_pd(val.val(), 0));
+    __m256i tmp64 = _mm256_cvtepi32_epi64(tmp32);
+    return SIMD<int64_t,4>(tmp64);
+  }
 
-  
-  template<>
-  class SIMD<int64_t,4>
+  SIMD<double,4> round(SIMD<double,4> val)
   {
-    __m256i m_val;
-  public:
-    SIMD () = default;
-    SIMD (const SIMD &) = default;
-    SIMD(int64_t val) : m_val{_mm256_set1_epi64x(val)} {};
-    SIMD(__m256i val) : m_val{val} {};
-    SIMD (int64_t v0, int64_t v1, int64_t v2, int64_t v3) : m_val{_mm256_set_epi64x(v3,v2,v1,v0) } { } 
-    SIMD (SIMD<int64_t,2> v0, SIMD<int64_t,2> v1) : SIMD(v0[0], v0[1], v1[0], v1[1]) { }  // can do better !
-    // SIMD (std::array<double,4> a) : SIMD(a[0],a[1],a[2],a[3]) { }
-    // SIMD (double const * p) { val = _mm256_loadu_pd(p); }
-    // SIMD (double const * p, SIMD<mask64,4> mask) { val = _mm256_maskload_pd(p, mask.val()); }
-    
-    static constexpr int size() { return 4; }
-    auto val() const { return m_val; }
-    // const double * Ptr() const { return (double*)&val; }
-    // SIMD<double, 2> Lo() const { return _mm256_extractf128_pd(val, 0); }
-    // SIMD<double, 2> Hi() const { return _mm256_extractf128_pd(val, 1); }
-    int64_t operator[](size_t i) const { return ((int64_t*)&m_val)[i]; }
-  };
-  
+    return SIMD<double,4>(_mm256_round_pd(val.val(), 2));
+  }
 
 
   template <int64_t first>
@@ -180,10 +192,12 @@ namespace ASC_HPC
   
   inline auto operator+ (SIMD<double,4> a, SIMD<double,4> b) { return SIMD<double,4> (_mm256_add_pd(a.val(), b.val())); }
   inline auto operator- (SIMD<double,4> a, SIMD<double,4> b) { return SIMD<double,4> (_mm256_sub_pd(a.val(), b.val())); }
+  inline auto operator- (SIMD<double,4> a) { return SIMD<double,4>(_mm256_sub_pd(_mm256_setzero_pd(), a.val())); }
   
   inline auto operator* (SIMD<double,4> a, SIMD<double,4> b) { return SIMD<double,4> (_mm256_mul_pd(a.val(), b.val())); }
   inline auto operator* (double a, SIMD<double,4> b) { return SIMD<double,4>(a)*b; }
 
+  inline auto operator&(SIMD<int64_t,4> a, SIMD<int64_t,4> b) { return SIMD<int64_t,4>(_mm256_and_si256(a.val(), b.val())); }
 
   inline auto operator+(SIMD<double,2> a, SIMD<double,2> b) { return SIMD<double,2>(_mm_add_pd(a.val(), b.val())); }
   inline auto operator-(SIMD<double,2> a, SIMD<double,2> b) { return SIMD<double,2>(_mm_sub_pd(a.val(), b.val())); }
@@ -191,6 +205,7 @@ namespace ASC_HPC
   inline auto operator*(double s, SIMD<double,2> b) { return SIMD<double,2>(_mm_mul_pd(_mm_set1_pd(s), b.val())); }
   inline auto operator*(SIMD<double,2> a, double s) { return SIMD<double,2>(_mm_mul_pd(a.val(), _mm_set1_pd(s))); }
 
+  inline auto operator&(SIMD<int64_t,2> a, SIMD<int64_t,2> b) { return SIMD<int64_t,2>(_mm_and_si128(a.val(), b.val())); }
 
 #ifdef __FMA__
   inline SIMD<double,4> fma (SIMD<double,4> a, SIMD<double,4> b, SIMD<double,4> c)

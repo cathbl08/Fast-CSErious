@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <array>
+#include <cmath>
 
 #include <simd.hpp>
 
@@ -85,4 +86,19 @@ int main()
   std::cout << b0 << "\n" << b1 << "\n" << b2 << "\n" << b3 << "\n";
 
 
+  // sincos test
+  cout << "\n--- sincos test ---\n";
+  SIMD<double,4> x_sincos(0.0, M_PI/6.0, M_PI/4.0, M_PI/2.0);
+  cout << "x = " << x_sincos << endl;
+
+  auto [s, c] = sincos(x_sincos);
+
+  cout << "sin(x) = " << s << endl;
+  cout << "cos(x) = " << c << endl;
+
+  cout << "ref sin: " << std::sin(x_sincos[0]) << ", " << std::sin(x_sincos[1]) << ", " << std::sin(x_sincos[2]) << ", " << std::sin(x_sincos[3]) << endl;
+  cout << "ref cos: " << std::cos(x_sincos[0]) << ", " << std::cos(x_sincos[1]) << ", " << std::cos(x_sincos[2]) << ", " << std::cos(x_sincos[3]) << endl;
+
+  cout << "error sin: " << s - SIMD<double,4>(std::sin(x_sincos[0]), std::sin(x_sincos[1]), std::sin(x_sincos[2]), std::sin(x_sincos[3])) << endl;
+  cout << "error cos: " << c - SIMD<double,4>(std::cos(x_sincos[0]), std::cos(x_sincos[1]), std::cos(x_sincos[2]), std::cos(x_sincos[3])) << endl;
 }
