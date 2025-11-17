@@ -4,7 +4,11 @@
 #include "arm_neon.h"
 
 #include <cstdint>
+#include <cstring>
 #include <array>
+#include <cstring>
+#include <tuple>
+
 
 /*
   implementation of SIMDs for ARM-Neon CPUs:
@@ -97,8 +101,15 @@ namespace ASC_HPC
 
 
 
+  // inline SIMD<double,2> select (SIMD<mask64,2> mask, SIMD<double,2> b, SIMD<double,2> c)
+  // { return vbslq_f64(mask.val(), b.val(), c.val()); }
+
   inline SIMD<double,2> select (SIMD<mask64,2> mask, SIMD<double,2> b, SIMD<double,2> c)
-  { return vbslq_f64(mask.val(), b.val(), c.val()); }
+  {
+    // reinterpret signed mask as unsigned for vbslq_f64
+    uint64x2_t umask = vreinterpretq_u64_s64(mask.val());
+    return SIMD<double,2>(vbslq_f64(umask, b.val(), c.val()));
+  }
   
   inline SIMD<double,2> hSum (SIMD<double,2> a, SIMD<double,2> b)
   { return vpaddq_f64(a.val(), b.val()); }
@@ -229,6 +240,127 @@ namespace ASC_HPC
     b2 = SIMD<double,4>(SIMD<double,2>(t0h), SIMD<double,2>(t2h)); // [a02 a12 a22 a32]
     b3 = SIMD<double,4>(SIMD<double,2>(t1h), SIMD<double,2>(t3h)); // [a03 a13 a23 a33]
 }
+
+// implementing math function: exponential using simd 
+
+// template <int N>
+// auto sincos (SIMD<double,N> x)
+// {
+//   SIMD<double,N> y = round((2/M_PI) * x);
+//   SIMD<int64_t,N> q = lround(y);
+  
+//   auto [s1,c1] = sincos_reduced(x - y * (M_PI/2)); 
+
+//   auto s2 = select((q & SIMD<int64_t,N>(1)) == SIMD<int64_t,N>(0), s1,  c1);
+//   auto s  = select((q & SIMD<int64_t,N>(2)) == SIMD<int64_t,N>(0), s2, -s2);
+  
+//   auto c2 = select((q & SIMD<int64_t,N>(1)) == SIMD<int64_t,N>(0), c1, -s1);
+//   auto c  = select((q & SIMD<int64_t,N>(2)) == SIMD<int64_t,N>(0), c2, -c2);
+  
+//   return std::tuple{ s, c };
+// }
+
+// double double_power_of_two(int n)
+// {
+//   // Clamp input to allowed range and add offset:
+//   n = std::max(n, -1022);
+//   n = std::min(n,  1023);
+//   n += 1023;
+
+//   // convert to 64bit, and shift to exponent
+//   uint64_t exp = n;
+//   // uint64_t bits = exp << 52;
+//   // with intrinsics this would be:
+//   uint64x2_t vexp = vdupq_n_u64(exp);    
+//   uint64x2_t bits = vshlq_n_u64(vexp, 52); // shift both lanes left by 52
+
+
+//   // reinterpret bits as double
+//   double result;
+//   memcpy (&result, &bits, 8);
+//   return result;
+// }
+
+  inline double double_power_of_two_scalar(int n)
+  {
+    n = std::max(n, -1022);
+    n = std::min(n,  1023);
+    n += 1023;
+
+    uint64_t bits = static_cast<uint64_t>(n) << 52;
+
+    double result;
+    std::memcpy(&result, &bits, sizeof(double));
+    return result;
+  }
+
+  // SIMD wrapper
+  template <size_t N>
+  SIMD<double,N> double_power_of_two(SIMD<int64_t,N> n)
+  {
+    std::array<double,N> vals;
+    for (size_t i = 0; i < N; ++i)
+      vals[i] = double_power_of_two_scalar(static_cast<int>(n[i]));
+    return SIMD<double,N>(vals);
+  }
+
+  inline double exp_reduced_scalar(double x)
+  {
+    static constexpr double P[] = {
+      1.26177193074810590878E-4,
+      3.02994407707441961300E-2,
+      9.99999999999999999910E-1,
+    };
+
+    static constexpr double Q[] = {
+      3.00198505138664455042E-6,
+      2.52448340349684104192E-3,
+      2.27265548208155028766E-1,
+      2.00000000000000000009E0,
+    };
+
+  double xx = x * x;
+  double px = (P[0]*xx + P[1]) * xx + P[2];
+  double qx = ((Q[0]*xx + Q[1]) * xx + Q[2]) * xx + Q[3];
+  return 1.0 + 2.0 * x * px / (qx - x * px);
+}
+
+ 
+  template <size_t N>
+  SIMD<double,N> exp_reduced (SIMD<double,N> x)
+  {
+    std::array<double,N> vals;
+    for (size_t i = 0; i < N; ++i)
+      vals[i] = exp_reduced_scalar(x[i]);
+    return SIMD<double,N>(vals);
+  }
+
+  template <size_t N>
+  SIMD<double,N> exponential (SIMD<double,N> x)
+  {
+    const double ln2 = 0.6931471805599453;
+    SIMD<double,N> y = round((1.0 / ln2) * x);
+    SIMD<int64_t,N> q = lround(y);
+    auto exp_tilda = exp_reduced(x - ln2 * y);
+    SIMD<double,N> two_q = double_power_of_two(q);
+    return two_q * exp_tilda;
+  }
+
+  // template <int N>
+  // SIMD<double,N> myexp (SIMD<double,N> x)
+  // {
+  //   constexpr double log2 = 0.693147180559945286;  //  log(2.0);
+                     
+  //   auto r = round(1/log2 * x);
+  //   auto rI = lround(r);
+  //   r *= log2;
+  
+  //   SIMD<double,N> pow2 = pow2_int64_to_float64 (rI);
+  //   return exp_reduced(x-r) * pow2;
+
+  //   // maybe better:
+  //   // x = ldexp( x, n );
+  // }
 
 
 }

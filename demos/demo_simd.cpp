@@ -101,4 +101,29 @@ int main()
 
   cout << "error sin: " << s - SIMD<double,4>(std::sin(x_sincos[0]), std::sin(x_sincos[1]), std::sin(x_sincos[2]), std::sin(x_sincos[3])) << endl;
   cout << "error cos: " << c - SIMD<double,4>(std::cos(x_sincos[0]), std::cos(x_sincos[1]), std::cos(x_sincos[2]), std::cos(x_sincos[3])) << endl;
+
+
+  cout << "\n==== Exponential test ====\n";
+
+SIMD<double,4> x_exp(-3.0, -1.0, 0.0, 1.0);
+cout << "x = " << x_exp << endl;
+
+auto x_exp_simd = exponential(x_exp);
+cout << "exp_simd(x) = " << x_exp_simd << endl;
+
+cout << "ref exp: "
+     << std::exp(x_exp[0]) << ", "
+     << std::exp(x_exp[1]) << ", "
+     << std::exp(x_exp[2]) << ", "
+     << std::exp(x_exp[3]) << endl;
+
+SIMD<double,4> x_exp_ref(
+    std::exp(x_exp[0]),
+    std::exp(x_exp[1]),
+    std::exp(x_exp[2]),
+    std::exp(x_exp[3])
+);
+
+cout << "error exp: " << (x_exp_simd - x_exp_ref) << endl;
+
 }

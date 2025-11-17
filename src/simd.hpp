@@ -6,6 +6,9 @@
 #include<memory>
 #include <array>
 #include <cstdint>
+#include <algorithm> // std::max/std::min
+#include <utility>   // for index_sequence, make_index_sequence
+#include <cmath>     // std::sin, std::cos
 
 namespace ASC_HPC
 {
@@ -190,6 +193,45 @@ namespace ASC_HPC
   template <typename T>
   auto operator* (double a, SIMD<T,1> b) { return SIMD<T,1> (a*b.val()); }
 
+  // NEW: SIMD * double
+  template <typename T, size_t S>
+  auto operator* (SIMD<T,S> a, double b)
+  {
+    return SIMD<T,S>(a.lo() * b, a.hi() * b);
+  }
+
+  template <typename T>
+  auto operator* (SIMD<T,1> a, double b)
+  {
+    return SIMD<T,1>(a.val() * b);
+  }
+
+  // NEW: SIMD / double
+  template <typename T, size_t S>
+  auto operator/ (SIMD<T,S> a, double b)
+  {
+    return SIMD<T,S>(a.lo() / b, a.hi() / b);
+  }
+
+  template <typename T>
+  auto operator/ (SIMD<T,1> a, double b)
+  {
+    return SIMD<T,1>(a.val() / b);
+  }
+
+  // bitwise AND for SIMD integral types
+  template <typename T, size_t S>
+  auto operator& (SIMD<T,S> a, SIMD<T,S> b)
+  {
+    return SIMD<T,S>(a.lo() & b.lo(), a.hi() & b.hi());
+  }
+
+  template <typename T>
+  auto operator& (SIMD<T,1> a, SIMD<T,1> b)
+  {
+    return SIMD<T,1>(a.val() & b.val());
+  }
+
   template <typename T, size_t S>
   auto operator+= (SIMD<T,S> & a, SIMD<T,S> b) { a = a+b; return a; }
   
@@ -200,6 +242,41 @@ namespace ASC_HPC
   auto fma(SIMD<T,1> a, SIMD<T,1> b, SIMD<T,1> c)
   { return SIMD<T,1> (a.val()*b.val()+c.val()); }
 
+  
+  template <typename T, size_t S>
+  auto operator- (SIMD<T,S> a, SIMD<T,S> b)
+  {
+    return SIMD<T,S>(a.lo() - b.lo(), a.hi() - b.hi());
+  }
+
+  template <typename T>
+  auto operator- (SIMD<T,1> a, SIMD<T,1> b)
+  {
+    return SIMD<T,1>(a.val() - b.val());
+  }
+
+  // unary minus
+  template <typename T, size_t S>
+  auto operator- (SIMD<T,S> a)
+  {
+    return SIMD<T,S>(-a.lo(), -a.hi());
+  }
+
+  template <typename T>
+  auto operator- (SIMD<T,1> a)
+  {
+    return SIMD<T,1>(-a.val());
+  }
+
+      template <typename T, size_t S>
+      auto operator+ (double a, const SIMD<T,S> & b)
+      { return SIMD<T,S>(a) + b; }
+
+      template <typename T, size_t S>
+      auto operator- (double a, const SIMD<T,S> & b)
+      {
+        return SIMD<T,S>(a) - b;
+      }
 
 
   // ****************** Horizontal sums *****************************
@@ -306,36 +383,91 @@ namespace ASC_HPC
 
 
   // highly accurate on [-pi/4, pi/4]
-  template <typename T>
-  auto sincos_reduced(T x)
+  inline std::tuple<double,double> sincos_reduced(double x)
+{
+  double x2 = x * x;
+
+  double s = (((((sincof[0] * x2 + sincof[1]) * x2 + sincof[2]) * x2
+               + sincof[3]) * x2 + sincof[4]) * x2 + sincof[5]);
+  s = x + x * x * x * s;
+
+  double c = (((((coscof[0] * x2 + coscof[1]) * x2 + coscof[2]) * x2
+               + coscof[3]) * x2 + coscof[4]) * x2 + coscof[5]);
+  c = 1.0 - 0.5 * x2 + x2 * x2 * c;
+
+  // return std::tuple{s, c};
+  return std::tuple<double,double>{s, c};
+
+}
+
+
+// SIMD wrapper for sincos_reduced
+template <size_t N>
+auto sincos_reduced(SIMD<double,N> x)
+{
+  std::array<double,N> s_arr;
+  std::array<double,N> c_arr;
+
+  for (size_t i = 0; i < N; ++i)
   {
-    auto x2 = x * x;
+    auto [s, c] = sincos_reduced(x[i]);
+    s_arr[i] = s;
+    c_arr[i] = c;
+  }
 
-    auto s = (((((sincof[0] * x2 + sincof[1]) * x2 + sincof[2]) * x2 + sincof[3]) * x2 + sincof[4]) * x2 + sincof[5]);
-    s = x + x * x * x * s;
+  return std::tuple{ SIMD<double,N>(s_arr), SIMD<double,N>(c_arr) };
+}
 
-    auto c = (((((coscof[0] * x2 + coscof[1]) * x2 + coscof[2]) * x2 + coscof[3]) * x2 + coscof[4]) * x2 + coscof[5]);
-    c = 1.0 - 0.5 * x2 + x2 * x2 * c;
-
-    return std::tuple{s, c};
+  // Helper to create SIMD<int64_t,N> constant
+  template <size_t N>
+  SIMD<int64_t,N> simd_const_int64(int64_t v)
+  {
+    return SIMD<int64_t,N>(v);  
   }
 
   template <size_t N>
   auto sincos(SIMD<double, N> x)
   {
-    SIMD<double, N> y = round((2 / M_PI) * x);
+    SIMD<double, N> y = round((2.0 / M_PI) * x);
     SIMD<int64_t, N> q = lround(y);
 
-    auto [s1, c1] = sincos_reduced(x - y * (M_PI / 2));
+    auto [s1, c1] = sincos_reduced(x - (M_PI / 2.0) * y);
 
-    auto s2 = select((q & SIMD<int64_t, N>(1)) == SIMD<int64_t, N>(0), s1, c1);
-    auto s = select((q & SIMD<int64_t, N>(2)) == SIMD<int64_t, N>(0), s2, -s2);
+    auto one  = simd_const_int64<N>(1);
+    auto two  = simd_const_int64<N>(2);
+    auto zero = simd_const_int64<N>(0);
 
-    auto c2 = select((q & SIMD<int64_t, N>(1)) == SIMD<int64_t, N>(0), c1, -s1);
-    auto c = select((q & SIMD<int64_t, N>(2)) == SIMD<int64_t, N>(0), c2, -c2);
+    auto s2 = select((q & one) == zero, s1, c1);
+    auto s  = select((q & two) == zero, s2, -s2);
+
+    auto c2 = select((q & one) == zero, c1, -s1);
+    auto c  = select((q & two) == zero, c2, -c2);
 
     return std::tuple{s, c};
   }
+
+    template <size_t N>
+    SIMD<double,N> exponential(SIMD<double,N> x);
+
+  template <size_t N>
+  SIMD<double,N> round(SIMD<double,N> x)
+  {
+    std::array<double,N> vals;
+    for (size_t i = 0; i < N; ++i)
+      vals[i] = std::round(x[i]);
+    return SIMD<double,N>(vals);
+  }
+
+  template <size_t N>
+  SIMD<int64_t,N> lround(SIMD<double,N> x)
+  {
+    std::array<int64_t,N> vals;
+    for (size_t i = 0; i < N; ++i)
+      vals[i] = static_cast<int64_t>(std::lround(x[i]));
+    return SIMD<int64_t,N>(vals);
+  }
+
+
 }
   
   
