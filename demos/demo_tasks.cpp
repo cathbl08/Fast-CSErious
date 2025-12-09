@@ -1,13 +1,18 @@
 #include <iostream>
 #include <sstream>
+// include matrix library
+#include <matrix.hpp>
 
 
 #include <taskmanager.hpp>
 #include <timer.hpp>
+#include <cmath>
 
 using namespace ASC_HPC;
 using std::cout, std::endl;
 
+// check namespace for matrix
+using namespace ASC_bla;
 
 int main()
 {
@@ -85,6 +90,50 @@ int main()
     {
       ;
     });
+  });
+
+  // use RunParallel for Matrix-Matrix multiplication
+  // matrix size
+  const size_t N = 500;
+  // use 4 tasks (3 workers and 1 main)
+  const size_t num_tasks = 4;
+
+  // define matrices A, B and C
+  Matrix<double, ColMajor> A(N,N);
+  Matrix<double, ColMajor> B(N,N);
+  Matrix<double, ColMajor> C(N,N);
+
+  // initialize matrices A and B
+  for (size_t i = 0; i < N; i++)
+    for (size_t j = 0; j < N; j++)
+    {
+      A(i,j) = static_cast<double>(i+j);
+      B(i,j) = static_cast<double>(i-j);
+    }
+
+  // timer for the entire parallel matrix multiplication
+  static Timer t_matmul("parallel matrix multiplication", {10,0,0});
+  RegionTimer reg_matmul(t_matmul);
+
+  // use RunParallel to perform matrix multiplication C = A * B
+  RunParallel(num_tasks, [N, &A, &B, &C](int task_id, int size)
+  {
+    // determine the range of rows for this task
+    size_t first = (N * task_id) / size;
+    size_t next = (N * (task_id + 1)) / size;
+
+    // perform multiplication for assigned rows
+    /*
+    for (size_t i = row_start; i < row_end; i++)
+      for (size_t j = 0; j < N; j++)
+      {
+        double sum = 0.0;
+        for (size_t k = 0; k < N; k++)
+          sum += A(i,k) * B(k,j);
+        C(i,j) = sum;
+      }
+    */
+   C.rows(first, next) = A.rows(first, next) * B;
   });
 
 
