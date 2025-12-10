@@ -18,6 +18,12 @@ include_directories(src concurrentqueue)
 
 add_executable (demo_tasks demos/demo_tasks.cpp 
                 src/taskmanager.cpp src/timer.cpp)
+
+# added
+target_include_directories(demo_tasks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# added
+target_include_directories(demo_tasks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue)
                 
 target_sources (demo_tasks PUBLIC src/taskmanager.hpp src/timer.hpp)
 
