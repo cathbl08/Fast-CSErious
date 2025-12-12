@@ -60,6 +60,17 @@ namespace ASC_HPC
                   if(!queue.try_dequeue(ctoken, task))  
                     continue; 
                 
+                /*Task task;
+                if(!queue.try_dequeue_from_producer(ptoken, task)) {
+                  if(!queue.try_dequeue(ctoken, task)) {
+                    // The worker thread yields/sleeps if the queue is empty.
+                    // This allows the OS to schedule CPU time to the main thread (Thread 0) 
+                    // which is necessary for it to enqueue tasks.
+                    std::this_thread::yield(); // Or std::this_thread::sleep_for(std::chrono::microseconds(1));
+                    continue; 
+                  }
+                }*/
+                
                 (*task.pfunc)(task.nr, task.size);
                 (*task.cnt)++;
               }
@@ -118,5 +129,21 @@ namespace ASC_HPC
         (*task.pfunc)(task.nr, task.size);
         (*task.cnt)++;
       }
+    
+    /*while (cnt < num)
+      {
+        Task task;
+        if(!queue.try_dequeue_from_producer(ptoken, task)) 
+          if(!queue.try_dequeue(ctoken, task))
+            {
+              // Yield control to the OS scheduler if the queue is empty.
+              // This allows idle worker threads (Threads 1, 2, 3...) to run.
+              std::this_thread::yield(); 
+              continue;
+            }
+        
+        (*task.pfunc)(task.nr, task.size);
+        (*task.cnt)++;
+      }*/
   }
 }
